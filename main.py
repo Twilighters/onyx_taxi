@@ -1,16 +1,41 @@
-# This is a sample Python script.
+from flask import Flask, jsonify, request
+from onyx_taxi_db import Driver, Client, Order, engine
+from sqlalchemy.orm import sessionmaker
+from contextlib import contextmanager
+from sqlalchemy.orm import scoped_session
+app = Flask(__name__)
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+Session = scoped_session(sessionmaker(autoflush=True, autocommit=False, bind=engine))
+
+@contextmanager
+def session_scope():
+        session = Session()
+        try:
+            yield session
+            session.commit()
+        except:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+@app.route("/")
+def hello_world():
+    return "<p>Hello, world</p>"
 
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+@app.route("/drivers", methods=["POST"])
+def post_driver():
+    content = request.get_json()
+    with session_scope() as session:
+
+        new_driver = Driver(
+            name=content["name"],
+            car=content["car"]
+        )
+        session.add(new_driver)
+    return jsonify(content)
 
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+if __name__ == "__main__":
+    app.run()
